@@ -1,0 +1,612 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ server.name }} - McSM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">{{ server.name }}</h1>
+        <p class="text-muted">{{ server.type|capitalize }} Server - {{ server.version }}</p>
+    </div>
+    <div class="server-controls" data-server-id="{{ server.id }}">
+        <span class="badge bg-secondary server-status me-2">Offline</span>
+        <button class="btn btn-success start-server-btn" data-server-id="{{ server.id }}">
+            <i class="fas fa-play me-1"></i>Start
+        </button>
+        <button class="btn btn-danger stop-server-btn d-none" data-server-id="{{ server.id }}">
+            <i class="fas fa-stop me-1"></i>Stop
+        </button>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="serverTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="console-tab" data-bs-toggle="tab" data-bs-target="#console" type="button" role="tab" aria-controls="console" aria-selected="true">
+                            <i class="fas fa-terminal me-1"></i>Console
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="properties-tab" data-bs-toggle="tab" data-bs-target="#properties" type="button" role="tab" aria-controls="properties" aria-selected="false">
+                            <i class="fas fa-cogs me-1"></i>Properties
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="files-tab" data-bs-toggle="tab" data-bs-target="#files" type="button" role="tab" aria-controls="files" aria-selected="false">
+                            <i class="fas fa-folder me-1"></i>Files
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="serverTabContent">
+                    <!-- Console Tab -->
+                    <div class="tab-pane fade show active" id="console" role="tabpanel" aria-labelledby="console-tab">
+                        <div class="console-output" id="consoleOutput"></div>
+                        <div class="input-group mt-3">
+                            <input type="text" class="form-control" id="consoleInput" placeholder="Enter a command...">
+                            <button class="btn btn-primary" id="sendCommand" type="button">
+                                <i class="fas fa-paper-plane me-1"></i>Send
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Properties Tab -->
+                    <div class="tab-pane fade" id="properties" role="tabpanel" aria-labelledby="properties-tab">
+                        <form id="propertiesForm">
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Changes will only take effect after the server is restarted.
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="memoryInput" class="form-label">Memory Allocation</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="memoryInput" name="memory" placeholder="2G">
+                                    <span class="input-group-text">GB</span>
+                                </div>
+                                <div class="form-text">Amount of RAM to allocate to the server (e.g., 2G for 2 GB).</div>
+                            </div>
+                            
+                            <div id="propertiesContainer">
+                                <!-- Server properties will be loaded here -->
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary" id="saveProperties">
+                                <i class="fas fa-save me-1"></i>Save Properties
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <!-- Files Tab -->
+                    <div class="tab-pane fade" id="files" role="tabpanel" aria-labelledby="files-tab">
+                        <div class="mb-3">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb" id="fileBreadcrumb">
+                                    <li class="breadcrumb-item active" aria-current="page">
+                                        <a href="#" data-path="">Root</a>
+                                    </li>
+                                </ol>
+                            </nav>
+                        </div>
+                        
+                        <div id="filesList">
+                            <!-- Files will be loaded here -->
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="fileEditor" class="d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 id="fileEditorTitle">File Editor</h5>
+                                <div>
+                                    <button class="btn btn-primary btn-sm" id="saveFile">
+                                        <i class="fas fa-save me-1"></i>Save
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" id="closeEditor">
+                                        <i class="fas fa-times me-1"></i>Close
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <textarea class="form-control" id="fileContent" rows="20"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+    /* Console styles */
+    .console-output {
+        background-color: #2b2b2b;
+        color: #f0f0f0;
+        font-family: monospace;
+        padding: 15px;
+        border-radius: 5px;
+        height: 400px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    
+    .console-line {
+        margin: 0;
+        line-height: 1.5;
+    }
+    
+    /* File list styles */
+    .file-item {
+        cursor: pointer;
+        padding: 8px 15px;
+        border-radius: 5px;
+        transition: background-color 0.2s;
+    }
+    
+    .file-item:hover {
+        background-color: #f0f0f0;
+    }
+    
+    .file-item i {
+        margin-right: 10px;
+    }
+    
+    /* Properties styles */
+    .property-row {
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const serverId = '{{ server.id }}';
+    let currentPath = '';
+    let currentFile = '';
+    
+    // Socket.IO connection
+    const socket = io();
+    
+    // Update server status initially and periodically
+    updateServerStatus();
+    setInterval(updateServerStatus, 5000);
+    
+    // Connect to server console when tab is shown
+    document.getElementById('console-tab').addEventListener('shown.bs.tab', function() {
+        socket.emit('join_server', { server_id: serverId });
+    });
+    
+    // Console output handling
+    socket.on('console_output', function(data) {
+        if (data.server_id === serverId) {
+            const consoleOutput = document.getElementById('consoleOutput');
+            const line = document.createElement('div');
+            line.classList.add('console-line');
+            line.textContent = data.line;
+            consoleOutput.appendChild(line);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+    });
+    
+    // Socket.IO event for server stopped
+    socket.on('server_stopped', function(data) {
+        if (data.server_id === serverId) {
+            updateServerStatus();
+            
+            // Add notification to console
+            const consoleOutput = document.getElementById('consoleOutput');
+            const line = document.createElement('div');
+            line.classList.add('console-line');
+            line.style.color = '#ff6b6b';
+            line.textContent = '--- Server stopped ---';
+            consoleOutput.appendChild(line);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+    });
+    
+    // Send command
+    document.getElementById('sendCommand').addEventListener('click', function() {
+        const command = document.getElementById('consoleInput').value.trim();
+        if (command) {
+            socket.emit('command', { server_id: serverId, command: command });
+            document.getElementById('consoleInput').value = '';
+        }
+    });
+    
+    // Send command on Enter key
+    document.getElementById('consoleInput').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            document.getElementById('sendCommand').click();
+        }
+    });
+    
+    // Load server properties when properties tab is shown
+    document.getElementById('properties-tab').addEventListener('shown.bs.tab', function() {
+        loadServerProperties();
+    });
+    
+    // Load files when files tab is shown
+    document.getElementById('files-tab').addEventListener('shown.bs.tab', function() {
+        loadFiles('');
+    });
+    
+    // Start server button click event
+    document.querySelector('.start-server-btn').addEventListener('click', function() {
+        startServer();
+    });
+    
+    // Stop server button click event
+    document.querySelector('.stop-server-btn').addEventListener('click', function() {
+        stopServer();
+    });
+    
+    // Save properties form submit event
+    document.getElementById('propertiesForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        saveProperties();
+    });
+    
+    // Save file button click event
+    document.getElementById('saveFile').addEventListener('click', function() {
+        saveFile();
+    });
+    
+    // Close editor button click event
+    document.getElementById('closeEditor').addEventListener('click', function() {
+        document.getElementById('fileEditor').classList.add('d-none');
+        document.getElementById('filesList').classList.remove('d-none');
+    });
+    
+    // Function to update server status
+    function updateServerStatus() {
+        fetch(`/api/server/${serverId}/status`)
+            .then(response => response.json())
+            .then(data => {
+                const statusBadge = document.querySelector('.server-status');
+                const startBtn = document.querySelector('.start-server-btn');
+                const stopBtn = document.querySelector('.stop-server-btn');
+                const consoleInput = document.getElementById('consoleInput');
+                const sendCommand = document.getElementById('sendCommand');
+                
+                if (data.running) {
+                    statusBadge.textContent = 'Running';
+                    statusBadge.classList.remove('bg-secondary', 'bg-danger');
+                    statusBadge.classList.add('bg-success');
+                    
+                    startBtn.classList.add('d-none');
+                    stopBtn.classList.remove('d-none');
+                    
+                    consoleInput.disabled = false;
+                    sendCommand.disabled = false;
+                } else {
+                    statusBadge.textContent = 'Offline';
+                    statusBadge.classList.remove('bg-success', 'bg-danger');
+                    statusBadge.classList.add('bg-secondary');
+                    
+                    startBtn.classList.remove('d-none');
+                    stopBtn.classList.add('d-none');
+                    
+                    consoleInput.disabled = true;
+                    sendCommand.disabled = true;
+                }
+                
+                // Add console lines if available
+                if (data.console && data.console.length > 0) {
+                    const consoleOutput = document.getElementById('consoleOutput');
+                    if (consoleOutput.childElementCount === 0) {
+                        data.console.forEach(line => {
+                            const lineElement = document.createElement('div');
+                            lineElement.classList.add('console-line');
+                            lineElement.textContent = line;
+                            consoleOutput.appendChild(lineElement);
+                        });
+                        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error updating server status:', error);
+            });
+    }
+    
+    // Function to start server
+    function startServer() {
+        fetch(`/api/server/${serverId}/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                setTimeout(updateServerStatus, 1000);
+            } else {
+                alert('Failed to start server');
+            }
+        })
+        .catch(error => {
+            console.error('Error starting server:', error);
+            alert('Error starting server');
+        });
+    }
+    
+    // Function to stop server
+    function stopServer() {
+        if (!confirm('Are you sure you want to stop the server? All players will be disconnected.')) {
+            return;
+        }
+        
+        fetch(`/api/server/${serverId}/stop`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                setTimeout(updateServerStatus, 1000);
+            } else {
+                alert('Failed to stop server');
+            }
+        })
+        .catch(error => {
+            console.error('Error stopping server:', error);
+            alert('Error stopping server');
+        });
+    }
+    
+    // Function to load server properties
+    function loadServerProperties() {
+        fetch(`/api/server/${serverId}/properties`)
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('propertiesContainer');
+                container.innerHTML = '';
+                
+                // Set memory input value
+                document.getElementById('memoryInput').value = data.memory || '2G';
+                
+                // Create form elements for each property
+                Object.entries(data).forEach(([key, value]) => {
+                    // Skip memory as it's handled separately
+                    if (key === 'memory') return;
+                    
+                    const row = document.createElement('div');
+                    row.classList.add('property-row');
+                    
+                    const label = document.createElement('label');
+                    label.classList.add('form-label');
+                    label.textContent = formatPropertyName(key);
+                    label.setAttribute('for', `property-${key}`);
+                    
+                    const input = document.createElement('input');
+                    input.classList.add('form-control');
+                    input.setAttribute('type', 'text');
+                    input.setAttribute('id', `property-${key}`);
+                    input.setAttribute('name', key);
+                    input.setAttribute('value', value);
+                    
+                    row.appendChild(label);
+                    row.appendChild(input);
+                    container.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading server properties:', error);
+                const container = document.getElementById('propertiesContainer');
+                container.innerHTML = `<div class="alert alert-danger">Error loading properties: ${error.message}</div>`;
+            });
+    }
+    
+    // Function to save properties
+    function saveProperties() {
+        const form = document.getElementById('propertiesForm');
+        const formData = new FormData(form);
+        
+        const properties = {};
+        for (const [key, value] of formData.entries()) {
+            properties[key] = value;
+        }
+        
+        fetch(`/api/server/${serverId}/properties`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(properties)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Properties saved successfully. Restart the server for changes to take effect.');
+            } else {
+                alert('Failed to save properties');
+            }
+        })
+        .catch(error => {
+            console.error('Error saving properties:', error);
+            alert('Error saving properties');
+        });
+    }
+    
+    // Function to load files
+    function loadFiles(path) {
+        currentPath = path;
+        
+        fetch(`/api/server/${serverId}/files?path=${encodeURIComponent(path)}`)
+            .then(response => response.json())
+            .then(data => {
+                // Update breadcrumb
+                updateBreadcrumb(path);
+                
+                // Update file list
+                const filesList = document.getElementById('filesList');
+                filesList.innerHTML = '';
+                
+                if (data.length === 0) {
+                    filesList.innerHTML = '<div class="alert alert-info">This directory is empty.</div>';
+                    return;
+                }
+                
+                const list = document.createElement('div');
+                list.classList.add('list-group');
+                
+                data.forEach(file => {
+                    const item = document.createElement('div');
+                    item.classList.add('list-group-item', 'file-item');
+                    
+                    const icon = document.createElement('i');
+                    if (file.type === 'directory') {
+                        icon.classList.add('fas', 'fa-folder', 'text-warning');
+                    } else {
+                        icon.classList.add('fas', 'fa-file', 'text-primary');
+                    }
+                    
+                    const name = document.createElement('span');
+                    name.textContent = file.name;
+                    
+                    item.appendChild(icon);
+                    item.appendChild(name);
+                    
+                    if (file.type === 'directory') {
+                        item.addEventListener('click', () => loadFiles(file.path));
+                    } else {
+                        item.addEventListener('click', () => openFile(file.path));
+                    }
+                    
+                    list.appendChild(item);
+                });
+                
+                filesList.appendChild(list);
+            })
+            .catch(error => {
+                console.error('Error loading files:', error);
+                const filesList = document.getElementById('filesList');
+                filesList.innerHTML = `<div class="alert alert-danger">Error loading files: ${error.message}</div>`;
+            });
+    }
+    
+    // Function to update breadcrumb
+    function updateBreadcrumb(path) {
+        const breadcrumb = document.getElementById('fileBreadcrumb');
+        breadcrumb.innerHTML = '';
+        
+        const parts = path.split('/').filter(Boolean);
+        
+        // Add root item
+        const rootItem = document.createElement('li');
+        rootItem.classList.add('breadcrumb-item');
+        
+        const rootLink = document.createElement('a');
+        rootLink.textContent = 'Root';
+        rootLink.href = '#';
+        rootLink.addEventListener('click', e => {
+            e.preventDefault();
+            loadFiles('');
+        });
+        
+        rootItem.appendChild(rootLink);
+        breadcrumb.appendChild(rootItem);
+        
+        // Add intermediate parts
+        let currentPath = '';
+        parts.forEach((part, index) => {
+            currentPath += (currentPath ? '/' : '') + part;
+            
+            const item = document.createElement('li');
+            item.classList.add('breadcrumb-item');
+            
+            if (index === parts.length - 1) {
+                item.classList.add('active');
+                item.textContent = part;
+                item.setAttribute('aria-current', 'page');
+            } else {
+                const link = document.createElement('a');
+                link.textContent = part;
+                link.href = '#';
+                
+                const pathCopy = currentPath;
+                link.addEventListener('click', e => {
+                    e.preventDefault();
+                    loadFiles(pathCopy);
+                });
+                
+                item.appendChild(link);
+            }
+            
+            breadcrumb.appendChild(item);
+        });
+    }
+    
+    // Function to open a file
+    function openFile(path) {
+        fetch(`/api/server/${serverId}/file?path=${encodeURIComponent(path)}`)
+            .then(response => response.json())
+            .then(data => {
+                currentFile = path;
+                document.getElementById('fileEditorTitle').textContent = path.split('/').pop();
+                document.getElementById('fileContent').value = data.content;
+                document.getElementById('filesList').classList.add('d-none');
+                document.getElementById('fileEditor').classList.remove('d-none');
+            })
+            .catch(error => {
+                console.error('Error opening file:', error);
+                alert(`Error opening file: ${error.message}`);
+            });
+    }
+    
+    // Function to save a file
+    function saveFile() {
+        const content = document.getElementById('fileContent').value;
+        
+        fetch(`/api/server/${serverId}/file?path=${encodeURIComponent(currentFile)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('File saved successfully');
+            } else {
+                alert('Failed to save file');
+            }
+        })
+        .catch(error => {
+            console.error('Error saving file:', error);
+            alert(`Error saving file: ${error.message}`);
+        });
+    }
+    
+    // Helper function to format property names
+    function formatPropertyName(name) {
+        return name
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    }
+});
+</script>
+{% endblock %}

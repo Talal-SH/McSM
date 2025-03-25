@@ -1,0 +1,114 @@
+/* Main styles for McSM - Minecraft Server Manager */
+
+/* Body styling */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8f9fa;
+}
+
+/* Footer positioning */
+footer {
+    margin-top: auto;
+}
+
+/* Server cards */
+.server-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.server-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.server-card .card-header {
+    background-color: #f8f9fa;
+}
+
+/* Console styling */
+.console-output {
+    background-color: #2b2b2b;
+    color: #f0f0f0;
+    font-family: 'Courier New', monospace;
+    padding: 15px;
+    border-radius: 5px;
+    height: 400px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.console-line {
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Console color highlights */
+.console-line:has(span.info) {
+    color: #64b5f6;
+}
+
+.console-line:has(span.warning) {
+    color: #ffb74d;
+}
+
+.console-line:has(span.error) {
+    color: #ef5350;
+}
+
+/* File browser */
+.file-item {
+    cursor: pointer;
+    padding: 8px 15px;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.file-item:hover {
+    background-color: #f0f0f0;
+}
+
+.file-item i {
+    margin-right: 10px;
+    font-size: 1.1em;
+    width: 20px;
+    text-align: center;
+}
+
+/* Form elements */
+.property-row {
+    margin-bottom: 15px;
+}
+
+/* Tabs styling */
+.nav-tabs .nav-link {
+    color: #495057;
+}
+
+.nav-tabs .nav-link.active {
+    font-weight: 500;
+}
+
+/* Server status badges */
+.server-status {
+    font-weight: normal;
+    padding: 0.5em 0.8em;
+}
+
+/* Responsiveness adjustments */
+@media (max-width: 768px) {
+    .server-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .server-controls .btn {
+        width: 100%;
+    }
+}

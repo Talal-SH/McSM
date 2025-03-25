@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - McSM{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="mb-3">
+                <i class="fas fa-server me-2"></i>Minecraft Servers
+            </h1>
+            <a href="{{ url_for('create_server_page') }}" class="btn btn-success">
+                <i class="fas fa-plus-circle me-1"></i>Create New Server
+            </a>
+        </div>
+        <p class="text-muted">
+            Manage your Minecraft servers from one place. You can add servers by clicking the "Create New Server" button
+            or by placing server folders directly in the <code>servers/</code> directory.
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    {% if servers %}
+        {% for server in servers %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 server-card" data-server-id="{{ server.id }}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ server.name }}</h5>
+                    <span class="badge bg-secondary server-status">Offline</span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Type:</strong> {{ server.type|capitalize }}</p>
+                    <p><strong>Version:</strong> {{ server.version }}</p>
+                    <p><strong>Port:</strong> {{ server.port }}</p>
+                    {% if server.has_mods %}
+                    <p><strong>Mods:</strong> {{ server.mod_count }}</p>
+                    {% endif %}
+                    <p><strong>MOTD:</strong> {{ server.motd }}</p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('server_detail', server_id=server.id) }}" class="btn btn-primary">
+                        <i class="fas fa-cog me-1"></i>Manage
+                    </a>
+                    <button class="btn btn-success start-server-btn" data-server-id="{{ server.id }}">
+                        <i class="fas fa-play me-1"></i>Start
+                    </button>
+                    <button class="btn btn-danger stop-server-btn d-none" data-server-id="{{ server.id }}">
+                        <i class="fas fa-stop me-1"></i>Stop
+                    </button>
+                    <button class="btn btn-outline-danger delete-server-btn" data-server-id="{{ server.id }}">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>No Minecraft servers detected.
+                <p class="mb-0 mt-2">
+                    To add a server, place your Minecraft server folder in the <code>servers/</code> directory.
+                    The server should contain a <code>server.properties</code> file and at least one JAR file.
+                </p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Connect to Socket.IO
+    const socket = io();
+    
+    // Get server status for each server
+    document.querySelectorAll('.server-card').forEach(card => {
+        const serverId = card.dataset.serverId;
+        updateServerStatus(serverId);
+    });
+    
+    // Start server button click event
+    document.querySelectorAll('.start-server-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const serverId = this.dataset.serverId;
+            startServer(serverId);
+        });
+    });
+    
+    // Stop server button click event
+    document.querySelectorAll('.stop-server-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const serverId = this.dataset.serverId;
+            stopServer(serverId);
+        });
+    });
+    
+    // Delete server button click event
+    document.querySelectorAll('.delete-server-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const serverId = this.dataset.serverId;
+            deleteServer(serverId);
+        });
+    });
+    
+    // Socket.IO event for server stopped
+    socket.on('server_stopped', data => {
+        const serverId = data.server_id;
+        updateServerStatus(serverId);
+    });
+    
+    // Update server status every 10 seconds
+    setInterval(() => {
+        document.querySelectorAll('.server-card').forEach(card => {
+            const serverId = card.dataset.serverId;
+            updateServerStatus(serverId);
+        });
+    }, 10000);
+    
+    // Function to update server status
+    function updateServerStatus(serverId) {
+        fetch(`/api/server/${serverId}/status`)
+            .then(response => response.json())
+            .then(data => {
+                const card = document.querySelector(`.server-card[data-server-id="${serverId}"]`);
+                const statusBadge = card.querySelector('.server-status');
+                const startBtn = card.querySelector('.start-server-btn');
+                const stopBtn = card.querySelector('.stop-server-btn');
+                
+                if (data.running) {
+                    statusBadge.textContent = 'Running';
+                    statusBadge.classList.remove('bg-secondary', 'bg-danger');
+                    statusBadge.classList.add('bg-success');
+                    
+                    startBtn.classList.add('d-none');
+                    stopBtn.classList.remove('d-none');
+                } else {
+                    statusBadge.textContent = 'Offline';
+                    statusBadge.classList.remove('bg-success', 'bg-danger');
+                    statusBadge.classList.add('bg-secondary');
+                    
+                    startBtn.classList.remove('d-none');
+                    stopBtn.classList.add('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating server status:', error);
+            });
+    }
+    
+    // Function to start server
+    function startServer(serverId) {
+        fetch(`/api/server/${serverId}/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                setTimeout(() => updateServerStatus(serverId), 1000);
+            } else {
+                alert('Failed to start server');
+            }
+        })
+        .catch(error => {
+            console.error('Error starting server:', error);
+            alert('Error starting server');
+        });
+    }
+    
+    // Function to stop server
+    function stopServer(serverId) {
+        fetch(`/api/server/${serverId}/stop`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                setTimeout(() => updateServerStatus(serverId), 1000);
+            } else {
+                alert('Failed to stop server');
+            }
+        })
+        .catch(error => {
+            console.error('Error stopping server:', error);
+            alert('Error stopping server');
+        });
+    }
+    
+    // Function to delete server
+    function deleteServer(serverId) {
+        if (!confirm('Are you sure you want to delete this server? This action cannot be undone.')) {
+            return;
+        }
+        
+        fetch(`/api/server/${serverId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload the page to show updated server list
+                window.location.reload();
+            } else {
+                alert('Failed to delete server: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting server:', error);
+            alert('Error deleting server');
+        });
+    }
+});
+</script>
+{% endblock %}

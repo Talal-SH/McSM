@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Server - McSM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Create New Minecraft Server</h1>
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form id="createServerForm">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Creating a new server will download the necessary files from Mojang's servers. This might take a few minutes depending on your internet connection.
+            </div>
+
+            <!-- Basic Settings -->
+            <h3 class="mt-4 mb-3">Basic Settings</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="serverName" class="form-label">Server Name</label>
+                        <input type="text" class="form-control" id="serverName" name="serverName" required>
+                        <div class="form-text">A unique name for your server. This will be used as the directory name.</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="serverPort" class="form-label">Server Port</label>
+                        <input type="number" class="form-control" id="serverPort" name="serverPort" value="25565" min="1024" max="65535" required>
+                        <div class="form-text">The port your server will run on. Default: 25565</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Minecraft Version -->
+            <div class="mb-3">
+                <label for="minecraftVersion" class="form-label">Minecraft Version</label>
+                <select class="form-select" id="minecraftVersion" name="minecraftVersion" required>
+                    <option value="" selected disabled>Select a version</option>
+                    {% if versions %}
+                        {% for version in versions[:20] %}
+                            <option value="{{ version.id }}">{{ version.id }} ({{ version.type }})</option>
+                        {% endfor %}
+                        {% if versions|length > 20 %}
+                            <option value="" disabled>...</option>
+                            <option value="show_all">Show all versions</option>
+                        {% endif %}
+                    {% else %}
+                        <option value="" disabled>Failed to load versions</option>
+                    {% endif %}
+                </select>
+                <div class="form-text">Select the Minecraft version for your server.</div>
+            </div>
+
+            <!-- Server Resources -->
+            <h3 class="mt-4 mb-3">Server Resources</h3>
+            <div class="mb-3">
+                <label for="serverMemory" class="form-label">Memory Allocation</label>
+                <div class="input-group">
+                    <input type="number" class="form-control" id="serverMemory" name="serverMemory" value="2" min="1" max="32" required>
+                    <span class="input-group-text">GB</span>
+                </div>
+                <div class="form-text">Amount of RAM to allocate to the server.</div>
+            </div>
+
+            <!-- Advanced Settings -->
+            <h3 class="mt-4 mb-3">Advanced Settings</h3>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="showAdvanced">
+                <label class="form-check-label" for="showAdvanced">Show advanced server.properties settings</label>
+            </div>
+
+            <div id="advancedSettings" class="d-none">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="gamemode" class="form-label">Game Mode</label>
+                            <select class="form-control" id="gamemode" name="gamemode">
+                                <option value="survival">Survival</option>
+                                <option value="creative">Creative</option>
+                                <option value="adventure">Adventure</option>
+                                <option value="spectator">Spectator</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="difficulty" class="form-label">Difficulty</label>
+                            <select class="form-control" id="difficulty" name="difficulty">
+                                <option value="peaceful">Peaceful</option>
+                                <option value="easy">Easy</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="hard">Hard</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="levelName" class="form-label">World Name</label>
+                            <input type="text" class="form-control" id="levelName" name="levelName" value="world">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="levelType" class="form-label">World Type</label>
+                            <select class="form-control" id="levelType" name="levelType">
+                                <option value="default">Default</option>
+                                <option value="flat">Flat</option>
+                                <option value="largeBiomes">Large Biomes</option>
+                                <option value="amplified">Amplified</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="maxPlayers" class="form-label">Max Players</label>
+                            <input type="number" class="form-control" id="maxPlayers" name="maxPlayers" value="20" min="1" max="100">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="viewDistance" class="form-label">View Distance</label>
+                            <input type="number" class="form-control" id="viewDistance" name="viewDistance" value="10" min="3" max="32">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="pvp" name="pvp" checked>
+                            <label class="form-check-label" for="pvp">Enable PvP</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="commandBlocks" name="commandBlocks" checked>
+                            <label class="form-check-label" for="commandBlocks">Enable Command Blocks</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="onlineMode" name="onlineMode" checked>
+                            <label class="form-check-label" for="onlineMode">Online Mode (Authenticate Players)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="spawnNpcs" name="spawnNpcs" checked>
+                            <label class="form-check-label" for="spawnNpcs">Spawn NPCs</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="spawnAnimals" name="spawnAnimals" checked>
+                            <label class="form-check-label" for="spawnAnimals">Spawn Animals</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="spawnMonsters" name="spawnMonsters" checked>
+                            <label class="form-check-label" for="spawnMonsters">Spawn Monsters</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="motd" class="form-label">Server Message (MOTD)</label>
+                    <input type="text" class="form-control" id="motd" name="motd" value="A Minecraft Server managed by McSM">
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary btn-lg" id="createServerBtn">
+                    <i class="fas fa-plus-circle me-1"></i>Create Server
+                </button>
+                <div class="spinner-border text-primary d-none" id="createSpinner" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </form>
+
+        <!-- Version selection modal for showing all versions -->
+        <div class="modal fade" id="versionModal" tabindex="-1" aria-labelledby="versionModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="versionModalLabel">Select Minecraft Version</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="versionSearch" placeholder="Search versions...">
+                        </div>
+                        <div class="list-group" id="allVersionsList">
+                            {% if versions %}
+                                {% for version in versions %}
+                                    <button type="button" class="list-group-item list-group-item-action version-item" 
+                                            data-version-id="{{ version.id }}" data-version-type="{{ version.type }}">
+                                        {{ version.id }} 
+                                        <span class="badge {% if version.type == 'release' %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {{ version.type }}
+                                        </span>
+                                    </button>
+                                {% endfor %}
+                            {% else %}
+                                <div class="list-group-item">Failed to load versions</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const createForm = document.getElementById('createServerForm');
+    const showAdvancedCheckbox = document.getElementById('showAdvanced');
+    const advancedSettings = document.getElementById('advancedSettings');
+    const createButton = document.getElementById('createServerBtn');
+    const createSpinner = document.getElementById('createSpinner');
+    const versionSelect = document.getElementById('minecraftVersion');
+    const versionModal = new bootstrap.Modal(document.getElementById('versionModal'));
+    
+    // Show/hide advanced settings
+    showAdvancedCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            advancedSettings.classList.remove('d-none');
+        } else {
+            advancedSettings.classList.add('d-none');
+        }
+    });
+    
+    // Version selection modal
+    versionSelect.addEventListener('change', function() {
+        if (this.value === 'show_all') {
+            versionModal.show();
+            // Reset selection
+            this.selectedIndex = 0;
+        }
+    });
+    
+    // Version search in modal
+    document.getElementById('versionSearch').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        document.querySelectorAll('.version-item').forEach(item => {
+            const versionId = item.getAttribute('data-version-id').toLowerCase();
+            const versionType = item.getAttribute('data-version-type').toLowerCase();
+            
+            if (versionId.includes(searchTerm) || versionType.includes(searchTerm)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+    
+    // Version selection from modal
+    document.querySelectorAll('.version-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const versionId = this.getAttribute('data-version-id');
+            const versionType = this.getAttribute('data-version-type');
+            
+            // Add option if it doesn't exist
+            let option = Array.from(versionSelect.options).find(opt => opt.value === versionId);
+            
+            if (!option) {
+                option = new Option(`${versionId} (${versionType})`, versionId);
+                versionSelect.add(option);
+            }
+            
+            // Select the option
+            versionSelect.value = versionId;
+            
+            // Hide the modal
+            versionModal.hide();
+        });
+    });
+    
+    // Form submission
+    createForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Disable button and show spinner
+        createButton.disabled = true;
+        createButton.classList.add('d-none');
+        createSpinner.classList.remove('d-none');
+        
+        // Get form data
+        const serverName = document.getElementById('serverName').value;
+        const serverPort = document.getElementById('serverPort').value;
+        const minecraftVersion = document.getElementById('minecraftVersion').value;
+        const serverMemory = document.getElementById('serverMemory').value;
+        
+        // Get advanced options if enabled
+        const options = {};
+        
+        if (showAdvancedCheckbox.checked) {
+            options['gamemode'] = document.getElementById('gamemode').value;
+            options['difficulty'] = document.getElementById('difficulty').value;
+            options['level-name'] = document.getElementById('levelName').value;
+            options['level-type'] = document.getElementById('levelType').value;
+            options['max-players'] = document.getElementById('maxPlayers').value;
+            options['view-distance'] = document.getElementById('viewDistance').value;
+            options['pvp'] = document.getElementById('pvp').checked.toString();
+            options['enable-command-block'] = document.getElementById('commandBlocks').checked.toString();
+            options['online-mode'] = document.getElementById('onlineMode').checked.toString();
+            options['spawn-npcs'] = document.getElementById('spawnNpcs').checked.toString();
+            options['spawn-animals'] = document.getElementById('spawnAnimals').checked.toString();
+            options['spawn-monsters'] = document.getElementById('spawnMonsters').checked.toString();
+            options['motd'] = document.getElementById('motd').value;
+        }
+        
+        // Create request payload
+        const payload = {
+            name: serverName,
+            port: serverPort,
+            version: minecraftVersion,
+            memory: serverMemory + 'G',
+            options: options
+        };
+        
+        // Send create request
+        fetch('/api/servers/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            createButton.disabled = false;
+            createButton.classList.remove('d-none');
+            createSpinner.classList.add('d-none');
+            
+            if (data.success) {
+                alert('Server created successfully!');
+                window.location.href = '/';
+            } else {
+                alert('Error creating server: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error creating server:', error);
+            createButton.disabled = false;
+            createButton.classList.remove('d-none');
+            createSpinner.classList.add('d-none');
+            alert('Error creating server: ' + error.message);
+        });
+    });
+});
+</script>
+{% endblock %}
