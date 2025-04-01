@@ -24,7 +24,7 @@ McSM is a web-based interface for managing multiple Minecraft servers running on
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/yourusername/McSM.git
+git clone https://github.com/Talal-SH/McSM.git
 cd McSM
 ```
 
